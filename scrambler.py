@@ -39,7 +39,7 @@ def generateHexDump(file_name):
 # hides each character of hide_hex within a random hide_pattern location of target_hex
 # returns updated target_hex list
 def hideFile(target_hex, hide_hex):
-  
+	
   # find all locations of hide_pattern within the target_hex
   hide_pattern_locs = findHidePattern(target_hex)
    
@@ -52,22 +52,22 @@ def hideFile(target_hex, hide_hex):
     loc2 = loc + 1
 	
     # update all hide_pattern_locs preceded by current loc
-	for val in hide_pattern_locs:
+    for val in hide_pattern_locs:
       if loc <= val:
         hide_pattern_locs[hide_pattern_locs.index(val)] = val + 2
 		
-	# update all key locations preceded by new key location	
+    # update all key locations preceded by new key location	
     for val in key:
        if loc <= val:
          key[key.index(val)] = val + 2
 		
     target_hex.insert(loc, char)
     target_hex.insert(loc2, "0")
-    key.append(loc)
-    print "Characters hidden:", target_hex[loc] + target_hex[loc2]
-	
     
-	
+    # add location of hidden character to key list
+    key.append(loc)
+    #print "Characters hidden:", target_hex[loc] + target_hex[loc2]
+
   return target_hex
 
 # creates a key file out of locations listed in key list
