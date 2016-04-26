@@ -1,18 +1,18 @@
 #!/usr/bin/python
 
 # Arseny Moguilevski
-# Updated version of script is much more efficient and allows for hiding of much larger files
 
-import re
+#import re
 import os
 import sys
 import random
-import subprocess
 from time import sleep
 
-# pattern R>>..endobj as list of hex characters
-hide_pattern = ["5", "2", "3", "E", "3", "E", "0", "D", "0", "A", "6", "5", "6", "E", "6", "4", "6", "F", "6", "2", "6", "A"]
+# pattern R>>..endobj as list of hex characters, make hide_pattern whatever hex pattern you want to hide data in
+hide_pattern = ['5', '2', '3', 'e', '3', 'e', '0', 'd', '0', 'a', '6', '5', '6', 'e', '6', '4', '6', 'f', '6', '2', '6', 'a']
 key = []
+offset = 4
+ascii_char = 2
 
 # finds all locations of hide_pattern within a hex dump
 # returns list of locations
@@ -26,27 +26,22 @@ def findHidePattern(target_hex):
 # generates a hex dump of a specified file
 # returns hex dump as a list of characters
 def generateHexDump(file_name):
-  # hex generated through subprocess call to xxd bash command
-  xxd = "xxd -u -ps -c 10000000000 %s > dump.hex" % file_name
-  subprocess.call(xxd, shell=True)
-  file = open("dump.hex", "r")
-  hex_dump = list(file.read().strip('\n'))
+  file = open(file_name, "r")
+  file_contents = file.read()
+  hex_dump = list(file_contents.encode('hex'))
   file.close()
-  os.remove("dump.hex")
   sleep(1)
   return hex_dump
 
 # hides each character of hide_hex within a random hide_pattern location of target_hex
 # returns updated target_hex list
 def hideFile(target_hex, hide_hex):
-	
   # find all locations of hide_pattern within the target_hex
   hide_pattern_locs = findHidePattern(target_hex)
    
   for char in hide_hex:
     # specify location of space between angle brackets >*> within hide_pattern
     selection = random.choice(hide_pattern_locs)
-    offset = 4
 	
     loc = selection + offset
     loc2 = loc + 1
@@ -54,20 +49,20 @@ def hideFile(target_hex, hide_hex):
     # update all hide_pattern_locs preceded by current loc
     for val in hide_pattern_locs:
       if loc <= val:
-        hide_pattern_locs[hide_pattern_locs.index(val)] = val + 2
+        hide_pattern_locs[hide_pattern_locs.index(val)] = val + ascii_char
 		
     # update all key locations preceded by new key location	
     for val in key:
        if loc <= val:
-         key[key.index(val)] = val + 2
+         key[key.index(val)] = val + ascii_char
 		
     target_hex.insert(loc, char)
     target_hex.insert(loc2, "0")
-    
+	
     # add location of hidden character to key list
     key.append(loc)
-    #print "Characters hidden:", target_hex[loc] + target_hex[loc2]
-
+    print "Characters hidden:", target_hex[loc] + target_hex[loc2]
+	
   return target_hex
 
 # creates a key file out of locations listed in key list
@@ -87,29 +82,23 @@ def createKeyList(key_file):
 	  key_list.append(loc.strip("\n"))
   return key_list
 
-# restore file by compiling list of hex values
+# restores file by compiling list of hex values
 def restoreFile(target_hex, target_file):
-  restored_file = open("target.hex", "w+")
-  # turn list of hex values into single string
-  restored_file.write("%s" % ''.join(target_hex))
+  restored_file = open(target_file, "w+")
+  # turns list of hex values into single string
+  restored_file.write("%s" % ''.join(target_hex).decode("hex"))
   restored_file.close()
-  xxd = "xxd -r -p target.hex " + target_file
-  # subprocess call to xxd command for file recompilation
-  subprocess.call(xxd, shell = True)
-  os.remove("target.hex")
-
+  
 # retrieves characters from hex dump at locations specified by values in key list
 def retrieveHidden(source_hex, key_list):
   hidden_text = ""  
+  # locates hex characters within PDF
   for val in key_list:
     hidden_text = hidden_text + source_hex[int(val)]
-  # creates a file
-  echo = "echo -n %s > hextest123.hex" % hidden_text
-  xxd = "xxd -r -p hextest123.hex"
-  subprocess.call(echo, shell = True)
-  subprocess.call(xxd, shell = True)
-  print("\n")
-  os.remove("hextest123.hex")
+  # creates a file and decodes the hidden text back into ascii
+  hidden_file = open("hidden_file", "w+")
+  hidden_file.write("%s" % ''.join(hidden_text).decode("hex"))
+  hidden_file.close()
 
 # scrambles secret text and hides it in pdf
 def scramble(target_file, hide_file):
@@ -136,7 +125,7 @@ def unscramble(source_file, key_file):
   print "Generating key list\n"
   key_list = createKeyList(key_file)
 
-  print "Retrieved hidden message:\n"
+  print "Retrieved hidden file"
   retrieveHidden(source_hex, key_list)
 
 # proceed with script based on command line file input
@@ -149,8 +138,8 @@ if __name__ == '__main__':
     file1 = sys.argv[1]
     file2 = sys.argv[2]
 	
-    if(((".key" in file1) or (".key" in file2))):
-      if((".key" in file1)):
+    if((".key" in file1) or (".key" in file2)):
+      if ".key" in file1:
         key_file = file1
         source_file = file2
       else:
@@ -158,5 +147,5 @@ if __name__ == '__main__':
         source_file = file1
       unscramble(source_file, key_file)
 	  
-    elif(((".key" not in file1) and (".key" not in file2))):
+    elif((".key" not in file1) and (".key" not in file2)):
       scramble(file1, file2)
