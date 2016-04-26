@@ -1,5 +1,8 @@
-#Arseny Moguilevski
 #!/usr/bin/python
+
+# Arseny Moguilevski
+# Updated version of script is much more efficient and allows for hiding of much larger files
+
 import re
 import os
 import sys
@@ -36,23 +39,34 @@ def generateHexDump(file_name):
 # hides each character of hide_hex within a random hide_pattern location of target_hex
 # returns updated target_hex list
 def hideFile(target_hex, hide_hex):
+  
+  # find all locations of hide_pattern within the target_hex
+  hide_pattern_locs = findHidePattern(target_hex)
+   
   for char in hide_hex:
-    # update locations of hide_patterns with each iteration
-    hide_pattern_locs = findHidePattern(target_hex)
+    # specify location of space between angle brackets >*> within hide_pattern
+    selection = random.choice(hide_pattern_locs)
+    offset = 4
 	
-	# specify location of space between angle brackets >*> within hide_pattern
-    loc = random.choice(hide_pattern_locs) + 4
+    loc = selection + offset
     loc2 = loc + 1
 	
-	# update all key locations preceded by new key location
+    # update all hide_pattern_locs preceded by current loc
+	for val in hide_pattern_locs:
+      if loc <= val:
+        hide_pattern_locs[hide_pattern_locs.index(val)] = val + 2
+		
+	# update all key locations preceded by new key location	
     for val in key:
-       if loc < val:
+       if loc <= val:
          key[key.index(val)] = val + 2
-    key.append(loc)
-    
+		
     target_hex.insert(loc, char)
     target_hex.insert(loc2, "0")
+    key.append(loc)
     print "Characters hidden:", target_hex[loc] + target_hex[loc2]
+	
+    
 	
   return target_hex
 
